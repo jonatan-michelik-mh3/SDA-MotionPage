@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "motionpage/canvas",
+  "version": "1.0.0",
+  "title": "mp-canvas",
+  "category": "media",
+  "icon": "images-alt",
+  "description": "Canvas element for image sequence.",
+  "supports": {
+    "html": false,
+    "className": false,
+    "customClassName": false,
+    "lock": true,
+    "reusable": false
+  },
+  "attributes": {
+    "customID": {
+      "type": "string",
+      "default": ""
+    },
+    "imageToggle": {
+      "type": "boolean",
+      "default": false
+    },
+    "image": {
+      "type": "object",
+      "default": {
+        "url": "//images.unsplash.com/photo-1557264322-b44d383a2906?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2340&q=80",
+        "id": 0
+      }
+    },
+    "sequenceID": {
+      "type": "string",
+      "default": ""
+    },
+    "height": {
+      "type": "number",
+      "default": 300
+    },
+    "styleID": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "textdomain": "motionpage",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css"
+}
