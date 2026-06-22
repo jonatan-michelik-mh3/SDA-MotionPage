@@ -1,0 +1,161 @@
+{
+  "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-cyrillic-ext-wght-normal.woff2": {
+    "file": "inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
+    "src": "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-cyrillic-ext-wght-normal.woff2"
+  },
+  "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-cyrillic-wght-normal.woff2": {
+    "file": "inter-cyrillic-wght-normal-DqGufNeO.woff2",
+    "src": "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-cyrillic-wght-normal.woff2"
+  },
+  "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-greek-ext-wght-normal.woff2": {
+    "file": "inter-greek-ext-wght-normal-DlzME5K_.woff2",
+    "src": "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-greek-ext-wght-normal.woff2"
+  },
+  "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-greek-wght-normal.woff2": {
+    "file": "inter-greek-wght-normal-CkhJZR-_.woff2",
+    "src": "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-greek-wght-normal.woff2"
+  },
+  "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2": {
+    "file": "inter-latin-ext-wght-normal-DO1Apj_S.woff2",
+    "src": "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2"
+  },
+  "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2": {
+    "file": "inter-latin-wght-normal-Dx4kXJAl.woff2",
+    "src": "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2"
+  },
+  "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-vietnamese-wght-normal.woff2": {
+    "file": "inter-vietnamese-wght-normal-CBcvBZtf.woff2",
+    "src": "../../../../node_modules/.bun/@fontsource-variable+inter@5.2.8/node_modules/@fontsource-variable/inter/files/inter-vietnamese-wght-normal.woff2"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/1-difference-blend.jpg": {
+    "file": "1-difference-blend-DoqSHjZ-.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/1-difference-blend.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/10-text-cursor.jpg": {
+    "file": "10-text-cursor-CdTqAqO6.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/10-text-cursor.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/2-outline.jpg": {
+    "file": "2-outline-CmNOUhr_.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/2-outline.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/3-multi-outline.jpg": {
+    "file": "3-multi-outline-TtjKZKqJ.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/3-multi-outline.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/4-multi-solid.jpg": {
+    "file": "4-multi-solid-kLHPNUek.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/4-multi-solid.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/5-outline-cross.jpg": {
+    "file": "5-outline-cross-Dm5XlC14.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/5-outline-cross.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/6-cross.jpg": {
+    "file": "6-cross-DT1S03nF.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/6-cross.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/7-blurred.jpg": {
+    "file": "7-blurred-BiCKnzIf.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/7-blurred.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/8-radial-gradient.jpg": {
+    "file": "8-radial-gradient-Dc93UPHV.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/8-radial-gradient.jpg"
+  },
+  "../../../../packages/builder/src/assets/cursor-previews/9-image-cursor.jpg": {
+    "file": "9-image-cursor-CKB128w5.jpg",
+    "src": "../../../../packages/builder/src/assets/cursor-previews/9-image-cursor.jpg"
+  },
+  "../../../../packages/builder/src/assets/header.webp": {
+    "file": "header-06BXXq2a.webp",
+    "src": "../../../../packages/builder/src/assets/header.webp"
+  },
+  "../../../../packages/builder/src/embed/embed.ts": {
+    "file": "assets/embed-Cbom_mIK.js",
+    "name": "embed",
+    "src": "../../../../packages/builder/src/embed/embed.ts",
+    "isEntry": true,
+    "imports": [
+      "../../../../packages/sdk/src/index.ts",
+      "_dispatchEvent-COqex2wi.js"
+    ],
+    "dynamicImports": [
+      "../../../../packages/builder/src/exports/isDebug.ts"
+    ]
+  },
+  "../../../../packages/builder/src/exports/isDebug.ts": {
+    "file": "assets/isDebug-Cq4BleKx.js",
+    "name": "isDebug",
+    "src": "../../../../packages/builder/src/exports/isDebug.ts",
+    "isDynamicEntry": true
+  },
+  "../../../../packages/sdk/src/index.ts": {
+    "file": "assets/vendor-sdk-C1SbRpb_.js",
+    "name": "vendor-sdk",
+    "src": "../../../../packages/sdk/src/index.ts",
+    "isDynamicEntry": true
+  },
+  "_dispatchEvent-COqex2wi.js": {
+    "file": "assets/dispatchEvent-COqex2wi.js",
+    "name": "dispatchEvent"
+  },
+  "_vendor-react-CuWo45CW.css": {
+    "file": "vendor-react-CuWo45CW.css",
+    "src": "_vendor-react-CuWo45CW.css"
+  },
+  "_vendor-react-CwrzGbg2.js": {
+    "file": "assets/vendor-react-CwrzGbg2.js",
+    "name": "vendor-react",
+    "isDynamicEntry": true,
+    "css": [
+      "vendor-react-CuWo45CW.css"
+    ],
+    "assets": [
+      "inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
+      "inter-cyrillic-wght-normal-DqGufNeO.woff2",
+      "inter-greek-ext-wght-normal-DlzME5K_.woff2",
+      "inter-greek-wght-normal-CkhJZR-_.woff2",
+      "inter-vietnamese-wght-normal-CBcvBZtf.woff2",
+      "inter-latin-ext-wght-normal-DO1Apj_S.woff2",
+      "inter-latin-wght-normal-Dx4kXJAl.woff2"
+    ]
+  },
+  "main.tsx": {
+    "file": "assets/main-BaTxcjgf.js",
+    "name": "main",
+    "src": "main.tsx",
+    "isEntry": true,
+    "imports": [
+      "_dispatchEvent-COqex2wi.js",
+      "_vendor-react-CwrzGbg2.js",
+      "../../../../packages/sdk/src/index.ts"
+    ],
+    "dynamicImports": [
+      "../../../../packages/sdk/src/index.ts",
+      "../../../../packages/sdk/src/index.ts",
+      "../../../../packages/sdk/src/index.ts",
+      "../../../../packages/sdk/src/index.ts",
+      "_vendor-react-CwrzGbg2.js",
+      "_vendor-react-CwrzGbg2.js",
+      "_vendor-react-CwrzGbg2.js",
+      "_vendor-react-CwrzGbg2.js"
+    ],
+    "css": [
+      "main-DBiqXIHR.css"
+    ],
+    "assets": [
+      "header-06BXXq2a.webp",
+      "1-difference-blend-DoqSHjZ-.jpg",
+      "4-multi-solid-kLHPNUek.jpg",
+      "8-radial-gradient-Dc93UPHV.jpg",
+      "10-text-cursor-CdTqAqO6.jpg",
+      "5-outline-cross-Dm5XlC14.jpg",
+      "9-image-cursor-CKB128w5.jpg",
+      "2-outline-CmNOUhr_.jpg",
+      "6-cross-DT1S03nF.jpg",
+      "3-multi-outline-TtjKZKqJ.jpg",
+      "7-blurred-BiCKnzIf.jpg"
+    ]
+  }
+}

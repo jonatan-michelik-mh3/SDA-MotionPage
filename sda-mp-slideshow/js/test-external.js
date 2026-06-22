@@ -8,14 +8,79 @@ setTimeout(function() {
 		seqEnabled = true;
 }, 2000);
 	
-//Make script execution wait until jQuery and GSAP are loaded
+// Dual-engine lookup: works with the Motion.page SDK (v3) AND GSAP (v2 / v3
+// legacy mode). Returns the named timeline, or null if no engine is ready yet.
+// SDK is checked first so that, in v3 SDK mode, a stray window.gsap from another
+// plugin can't win (the timeline is only registered with one engine anyway).
+function mpGetSequence(id) {
+    if (window.Motion && Motion.get) return Motion.get(id);    // v3 SDK
+    if (window.gsap && gsap.getById) return gsap.getById(id);  // v2 / legacy GSAP
+    return null;
+}
+
+//Make script execution wait until jQuery and the animation engine are loaded
 function deferSlideshow(useMethod) {
 		var state = document.readyState;
-    if (window.jQuery && window.gsap && gsap.getById('mpSequence') && seqEnabled) {
+    // Ready when jQuery is up and either engine exposes the 'mpSequence' timeline.
+    if (window.jQuery && mpGetSequence('mpSequence') && seqEnabled) {
         useMethod();
     } else {
         setTimeout(function() { deferSlideshow(useMethod) }, 500);
     }
+}
+
+// Diagnostics — set to false to silence the source/value log in the console.
+var SDA_SLIDESHOW_DEBUG = true;
+
+// Log which data source was used + the resolved values, e.g.:
+//   [SDA Slideshow] zdroj dát: baked (window.SDA_SLIDESHOW_DATA) | numSlides: 3 | časy: [1.1, 2.2, 3.5]
+function sdaLogSource(source, data) {
+    if (!SDA_SLIDESHOW_DEBUG) return;
+    var times = [];
+    if (data && data.numSlides) {
+        for (var i = 1; i <= data.numSlides; i++) { times.push(data['timeSlide' + i]); }
+    }
+    console.log('[SDA Slideshow] zdroj dát: ' + source +
+        ' | numSlides: ' + (data && data.numSlides != null ? data.numSlides : '—') +
+        ' | časy: [' + times.join(', ') + ']');
+}
+
+// Resolve the sequence's custom data (numSlides, timeSlide1...). Hybrid strategy:
+//   1) NEW sequences  -> Elementor data-attributes on the sequence wrapper:
+//        data-mp-slides="3"   data-mp-times="1.1,2.2,3.5"
+//   2) EXISTING        -> baked per-page into sda-mp-slideshow.php (window.SDA_SLIDESHOW_DATA)
+//   3) LEGACY fallback -> GSAP timeline.data on the un-migrated 2.5.3 site
+// All three resolve to the same { numSlides, timeSlide1... } shape used below.
+function seqData(seq) {
+    // 1) NEW — Elementor data-attributes (fully decoupled from Motion.page).
+    var el = document.querySelector('[data-mp-slides]');
+    if (el) {
+        var n = parseInt(el.getAttribute('data-mp-slides'), 10);
+        if (n > 0) {
+            var times = (el.getAttribute('data-mp-times') || '')
+                .split(',').map(function (s) { return parseFloat(s); });
+            var d = { numSlides: n };
+            for (var i = 1; i <= n; i++) { d['timeSlide' + i] = times[i - 1]; }
+            sdaLogSource('Elementor (data-mp-slides)', d);
+            return d;
+        }
+    }
+    // 2) EXISTING — values baked per page into sda-mp-slideshow.php.
+    if (window.SDA_SLIDESHOW_DATA && typeof window.SDA_SLIDESHOW_DATA === 'object') {
+        sdaLogSource('baked (window.SDA_SLIDESHOW_DATA)', window.SDA_SLIDESHOW_DATA);
+        return window.SDA_SLIDESHOW_DATA;
+    }
+    // 3) LEGACY — GSAP timeline.data (current 2.5.3 site, before migration).
+    if (seq && seq.data && typeof seq.data === 'object') {
+        sdaLogSource('legacy (mpSeq.data)', seq.data);
+        return seq.data;
+    }
+    // 4) Nothing found — diagnostics.
+    console.warn('[SDA Slideshow] custom data (numSlides/timeSlideN) not found.');
+    console.log('  [data-mp-slides]  :', document.querySelector('[data-mp-slides]'));
+    console.log('  SDA_SLIDESHOW_DATA:', window.SDA_SLIDESHOW_DATA);
+    console.log('  timeline.data     :', seq && seq.data);
+    return null;
 }
 
 deferSlideshow(function() {
@@ -63,13 +128,16 @@ deferSlideshow(function() {
             //console.log("Window is loaded");
 					
             // load parameters from MP image sequence
-            mpSeq = gsap.getById('mpSequence');
-            numSlides = mpSeq.data['numSlides'];
+            // dual-engine: Motion.get() (SDK) or gsap.getById() (GSAP)
+            mpSeq = mpGetSequence('mpSequence');
+            // v3: custom data resolved via seqData() (no guaranteed .data on SDK Timeline)
+            var seqDataObj = seqData(mpSeq);
+            numSlides = seqDataObj ? seqDataObj['numSlides'] : undefined;
             timeSlide = [];
             errData = false;
             if (numSlides && numSlides > 0) {
                 for (let i = 1; i <= numSlides; i++) {
-                    timeValue = mpSeq.data['timeSlide' + i];
+                    timeValue = seqDataObj['timeSlide' + i];
                     if (Number(parseFloat(timeValue)) === timeValue) {
                         timeSlide[i] = timeValue;
                     } else {
@@ -165,12 +233,14 @@ deferSlideshow(function() {
                 }, 3500);
             }
 
-            // add labels to MP timeline
-            // mpTL = window['_mp_1678280599'];
-            mpTL = mpSeq.parent;
+            // schedule slide callbacks on the MP timeline
+            // GSAP: the controllable timeline is mpSeq.parent (the main timeline).
+            // SDK: mpSequence IS the root timeline (no .parent), so fall back to it.
+            mpTL = mpSeq.parent || mpSeq;
+            // call() takes the time (seconds) directly as its position argument in
+            // both engines, so the GSAP-era addLabel() step is no longer needed.
             for (let i = 1; i <= numSlides; i++) {
-                mpTL.addLabel('label' + i, timeSlide[i]);
-                mpTL.call(showSlide, [i], 'label' + i);
+                mpTL.call(showSlide, [i], timeSlide[i]);
             }
 
             //console.log(mpTL);
@@ -184,8 +254,10 @@ deferSlideshow(function() {
                     tweenActive = false;
                     //mpTL.play();
                     if (playingBackwards(mpTL)) {
-                        mpTL.reversed(false);
-                        mpTL.time(timeSlide[actSlide] + 0.01);
+                        // play(from) works in BOTH engines: sets forward direction
+                        // AND resumes from the given time in one call (replaces the
+                        // GSAP-only reversed(false) + time(value) pair).
+                        mpTL.play(timeSlide[actSlide] + 0.01);
                     }
                 }
                 if (!tweenActive && !playingBackwards(mpTL) && (clickVar == actSlide || clickVar == 0)) {
@@ -295,14 +367,23 @@ deferSlideshow(function() {
                 });
             };
 
+            // Direction check, dual-engine. GSAP yoyo timelines flip direction each
+            // repeat cycle, so we correct for that using GSAP-only methods. The SDK
+            // has none of them (and no yoyo), so the typeof guards make this collapse
+            // to `return animation.reversed()` there.
             function playingBackwards(animation) {
-                var reversed = animation.reversed(),
-                    totalTime = animation.totalTime(),
-                    cycleDuration;
-                if (animation.repeat && animation.yoyo() && animation.repeat() && totalTime < animation.totalDuration()) {
-                    cycleDuration = animation.duration() + animation.repeatDelay();
-                    if (((totalTime / cycleDuration) | 0) & 1) {
-                        reversed = !reversed;
+                var reversed = animation.reversed();
+                if (typeof animation.totalTime === 'function' &&
+                    typeof animation.yoyo === 'function' &&
+                    typeof animation.repeat === 'function' &&
+                    animation.yoyo() && animation.repeat()) {
+                    var totalTime = animation.totalTime();
+                    if (totalTime < animation.totalDuration()) {
+                        var cycleDuration = animation.duration() +
+                            (typeof animation.repeatDelay === 'function' ? animation.repeatDelay() : 0);
+                        if (((totalTime / cycleDuration) | 0) & 1) {
+                            reversed = !reversed;
+                        }
                     }
                 }
                 return reversed;

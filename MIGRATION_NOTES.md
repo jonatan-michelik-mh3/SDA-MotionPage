@@ -1,310 +1,163 @@
-# Migrácia sda-mp-slideshow na Motion Page v3 / @motion.page/sdk
+# Migrácia `sda-mp-slideshow` na Motion Page v3 / @motion.page/sdk
 
-## Kľúčové zistenie po inštalácii SDK
-
-**`@motion.page/sdk` je kompletne nový, nezávislý engine — GSAP nie je zahrnutý vôbec.**
-
-- `window.gsap` nebude existovať
-- `gsap.getById('mpSequence')` nebude fungovať
-- Globálne premenné v browseri: `window.Motion` a `window.MotionTimeline`
+> **Stav: NASADENÉ A OVERENÉ na živom GSAP webe.** Plugin funguje v **GSAP** (v2.5.3 / v3 legacy) **aj SDK** (v3) režime.
+> Dátum: 2026-06-18 · SDK `@motion.page/sdk` **1.2.1** · MP WordPress plugin v3 = **3.2.0**
+>
+> ✅ Overené naživo: routing podľa `product_cat` slug-u, a všetky 3 zdroje dát — **Elementor**, **baked**, **legacy**.
+> Zostáva: (1) doriešiť 2 legacy stránky 2897/6432, (2) samotná migrácia na v3 (keď budeš chcieť) + re-test v SDK režime. Viď koniec.
 
 ---
 
-## Aktuálne závislosti v `test-external.js` a ich v3 ekvivalent
+## TL;DR — čo a prečo
 
-### 1. Získanie timeline
+Motion Page prešiel z GSAP na vlastný SDK. Tvoj slideshow plugin závisel od `gsap.getById('mpSequence')`,
+timeline metód a custom dát `mpSeq.data` (počet slidov + časy zastavení). Riešenie:
 
-| v2 (GSAP) | v3 (SDK) | Stav |
-|-----------|----------|------|
-| `window.gsap` check | `window.Motion` check | **Zmeniť** |
-| `gsap.getById('mpSequence')` | `Motion.get('mpSequence')` | **Zmeniť** |
+1. **`test-external.js` je dual-mode** — deteguje GSAP aj SDK a funguje v oboch.
+2. **Slideshow dáta sú odpojené od Motion Page** (vlastníš ich):
+   - **existujúce** → vyexportované z DB, zapečené v plugine, **kľúčované podľa animácie (`timelineUID`)**,
+   - **nové** → Elementor data-atribúty (`data-mp-slides` / `data-mp-times`).
 
-```javascript
-// v2 — nebude fungovať:
-if (window.jQuery && window.gsap && gsap.getById('mpSequence') && seqEnabled)
-mpSeq = gsap.getById('mpSequence');
-
-// v3 — nový kód:
-if (window.jQuery && window.Motion && Motion.has('mpSequence') && seqEnabled)
-mpSeq = Motion.get('mpSequence');
-```
+Tým je plugin **nezávislý od verzie Motion Page**.
 
 ---
 
-### 2. Prístup k custom dátam slidov (NAJVÄČŠÍ PROBLÉM)
+## Motion Page v3 (plugin 3.2.0) — ako to funguje
 
-| v2 | v3 | Stav |
-|----|-----|------|
-| `mpSeq.data['numSlides']` | **Neznáme** | **Kritické** |
-| `mpSeq.data['timeSlide1']` ... | **Neznáme** | **Kritické** |
+Analyzované z lokálnej kópie [motionpage-v3/](motionpage-v3/):
 
-SDK `Timeline` nemá žiadnu `.data` vlastnosť. Nevieme, ako Motion Page v3 bude tieto dáta vystavovať.
+- **Hybrid — dva režimy** ([wp/App/Frontend/Enqueue.php](motionpage-v3/wp/App/Frontend/Enqueue.php)):
+  - **Legacy GSAP** — načíta `mp-gsap` (GSAP je stále v balíku),
+  - **SDK** — načíta `mp-motion-sdk` (bundle z `wp-content/uploads/`).
+  - Rozhoduje `$sdk_bundle_url`.
+- **Inštalácia ≠ migrácia.** Upgrade pluginu **nespúšťa** migráciu — len zobrazí admin notice. Reálne sa migruje
+  **až otvorením buildera** (`useAutoMigrate`). Pôvodný `script_value` (GSAP) **ostáva v DB** vedľa nového
+  `generated_code` → rollback cez DB backup je možný.
+- **Script handle ostáva `mp-ImageSequence`** v oboch režimoch ([Enqueue.php:810](motionpage-v3/wp/App/Frontend/Enqueue.php#L810)).
+  ✅ **Tvoj PHP netreba meniť** (pôvodný otáznik vyriešený).
+- Globál `window.MOTIONPAGE_FRONT` existuje (nesie `.bp`, `.imageSequence`, `.isw`).
 
-**Možné scenáre:**
-- Motion Page v3 stále nastaví `.data` dynamicky na SDK Timeline objekte (JS to umožňuje aj bez TS definícií)
-- Dáta presunú do `window.MOTIONPAGE_FRONT.sequences`
-- Dáta budú v HTML `data-*` atribútoch na canvas elemente
-
-**Overenie po upgrade na v3 (v DevTools):**
-```javascript
-var tl = Motion.get('mpSequence');
-console.log(tl.data);                      // existuje?
-console.log(tl['data']);                   // alternatívne
-console.log(window.MOTIONPAGE_FRONT);      // nové polia?
-console.log(document.querySelector('[data-mp-num-slides]')); // HTML atribúty?
-```
+> **Bezpečné nasadenie:** keďže inštalácia v3 nemigruje, web ostane v GSAP režime a tvoj plugin beží ďalej.
+> „Bod zlomu" je otvorenie buildera, nie inštalácia.
 
 ---
 
-### 3. Parent timeline
+## Custom data — prečo sme ich odpojili
 
-| v2 | v3 | Stav |
-|----|-----|------|
-| `mpTL = mpSeq.parent` | `mpTL = mpSeq` (priamo) | **Zmeniť** |
+Custom property `data` si v MP editore zadal cez **Custom / Advanced Code Field** ako GSAP `data` property.
+GSAP vystavoval `vars.data` ako `timeline.data` — preto `mpSeq.data` fungovalo. **SDK to nemá:**
 
-SDK `Timeline` nemá `.parent`. `mpSequence` je v v3 priamo root timeline.
+- SDK `Timeline` nemá `.data` ([Timeline.d.ts](node_modules/@motion.page/sdk/dist/core/Timeline.d.ts)),
+- SDK `Animation` si vars neuchováva čitateľne — mení ich na render-only `PropTween`-y ([Animation.d.ts](node_modules/@motion.page/sdk/dist/core/Animation.d.ts)),
+- v3 editor Custom Field zostáva, ale `data:{…}` sa už nedá prečítať späť.
 
-```javascript
-// v2:
-mpTL = mpSeq.parent;
+→ Po migrácii by sa `numSlides`/`timeSlideN` **stratili**. Preto sme ich **vyexportovali a zapiekli** do pluginu
+(model: dáta patria **animácii**, nie stránke — viď [docs/data-mapping.md](sda-mp-slideshow/docs/data-mapping.md)).
 
-// v3:
-mpTL = mpSeq; // mpSequence IS the main timeline
-```
-
----
-
-### 4. addLabel + call → priamo call s pozíciou
-
-| v2 | v3 | Stav |
-|----|-----|------|
-| `mpTL.addLabel('label1', 2.5)` + `mpTL.call(fn, [1], 'label1')` | `mpTL.call(fn, [1], 2.5)` | **Zjednodušiť** |
-
-SDK `Timeline.call()` akceptuje priamo čas v sekundách ako tretí parameter — `addLabel` nie je potrebný.
-
-```javascript
-// v2 (2 kroky):
-mpTL.addLabel('label' + i, timeSlide[i]);
-mpTL.call(showSlide, [i], 'label' + i);
-
-// v3 (1 krok):
-mpTL.call(showSlide, [i], timeSlide[i]);
-```
+Pre **nové** animácie: SDK vie čítať CSS premenné (`--var`), ale zvolili sme robustnejšie **Elementor
+data-atribúty** (`data-mp-slides`, `data-mp-times`) — úplne nezávislé od MP.
 
 ---
 
-### 5. Setter `reversed(false)` → `play()` + `seek()`
+## `test-external.js` — dual-mode (GSAP + SDK)
 
-| v2 | v3 | Stav |
-|----|-----|------|
-| `mpTL.reversed(false)` (setter) | Neexistuje setter | **Zmeniť** |
-| `mpTL.time(value)` | `mpTL.seek(value)` alebo `mpTL.time(value)` | Overiť |
-
-SDK `.reversed()` je **len getter** (vracia boolean). Na "odreversovanie" treba použiť `.play()`.
+Engine sa deteguje cez `mpGetSequence()`:
 
 ```javascript
-// v2 (test-external.js:187-188):
-mpTL.reversed(false);
-mpTL.time(timeSlide[actSlide] + 0.01);
-
-// v3:
-mpTL.play();
-mpTL.seek(timeSlide[actSlide] + 0.01); // seek = skok bez spustenia
-// alebo mpTL.time(timeSlide[actSlide] + 0.01) — otestovať čo funguje
-```
-
----
-
-### 6. `playingBackwards()` funkcia — zjednodušiť
-
-Aktuálna funkcia (`test-external.js:298-309`) používa GSAP-špecifické metódy:
-
-| Použitá metóda | SDK ekvivalent | Stav |
-|----------------|---------------|------|
-| `animation.reversed()` | `.reversed()` ✓ | OK |
-| `animation.totalTime()` | **Neexistuje** | Odstrániť |
-| `animation.yoyo()` | **Neexistuje** | Odstrániť |
-| `animation.repeat()` (getter) | **Neexistuje** | Odstrániť |
-| `animation.totalDuration()` | `.totalDuration()` ✓ | OK |
-| `animation.repeatDelay()` | **Neexistuje** | Odstrániť |
-
-SDK `.reversed()` getter by mal správne vracať smer aj počas yoyo — komplexná logika nie je potrebná.
-
-```javascript
-// v2 (komplexná GSAP logika):
-function playingBackwards(animation) {
-    var reversed = animation.reversed(),
-        totalTime = animation.totalTime(), // neexistuje
-        cycleDuration;
-    if (animation.repeat && animation.yoyo() && ...) { // neexistuje
-        ...
-    }
-    return reversed;
-}
-
-// v3 (zjednodušené):
-function playingBackwards(animation) {
-    return animation.reversed();
+function mpGetSequence(id) {
+    if (window.Motion && Motion.get) return Motion.get(id);   // v3 SDK
+    if (window.gsap && gsap.getById) return gsap.getById(id);  // v2 / legacy GSAP
+    return null;
 }
 ```
 
----
+Väčšina API je zdieľaná (SDK je zámerne GSAP-kompatibilné), vetviť bolo treba len:
 
-### 7. Timeline metódy — porovnanie
+| miesto | GSAP | SDK | riešenie |
+|---|---|---|---|
+| získanie timeline | `gsap.getById` | `Motion.get` | `mpGetSequence()` |
+| hlavná timeline | `mpSeq.parent` | `mpSeq` (root) | `mpSeq.parent \|\| mpSeq` |
+| `playingBackwards` | yoyo logika (`totalTime/yoyo/repeat`) | len `reversed()` | `typeof` guard |
 
-| Metóda | v2 (GSAP) | v3 (SDK) | Stav |
-|--------|-----------|----------|------|
-| `mpTL.play()` | ✓ | ✓ | OK |
-| `mpTL.pause()` | ✓ | ✓ | OK |
-| `mpTL.reverse()` | ✓ | ✓ | OK |
-| `mpTL.reversed()` getter | ✓ | ✓ | OK |
-| `mpTL.reversed(bool)` setter | ✓ | **Neexistuje** | Zmeniť |
-| `mpTL.time()` getter | ✓ | ✓ | OK |
-| `mpTL.time(value)` setter | ✓ | Overiť | Overiť |
-| `mpTL.progress()` getter | ✓ | ✓ | OK |
-| `mpTL.seek(value)` | — | ✓ (nový) | Použiť |
-| `mpTL.addLabel()` | ✓ | **Neexistuje** | Nahradiť |
-| `mpTL.call(fn, args, pos)` | ✓ | ✓ | OK |
-| `mpTL.totalTime()` | ✓ | **Neexistuje** | Odstrániť |
-| `mpTL.yoyo()` | ✓ | **Neexistuje** | Odstrániť |
-| `mpTL.repeat()` getter | ✓ | **Neexistuje** | Odstrániť |
-| `mpTL.repeatDelay()` | ✓ | **Neexistuje** | Odstrániť |
-| `mpTL.parent` | ✓ | **Neexistuje** | Zmeniť |
-| `.data` property | ✓ (GSAP ext.) | **Neexistuje v type def.** | Kritické |
+Zdieľané v oboch: `play()`, `play(from)`, `pause()`, `reverse()`, `time()`, `reversed()`, `call(fn,args,čas)`.
+
+### `seqData()` — zdroj dát (priorita)
+
+1. **Nové** → Elementor `[data-mp-slides]` / `[data-mp-times]`
+2. **Existujúce** → `window.SDA_SLIDESHOW_DATA` (injektne PHP plugin)
+3. **Legacy** → `mpSeq.data` (kým je MP v GSAP režime)
+
+Všetky vracajú rovnaký tvar `{ numSlides, timeSlideN }`.
 
 ---
 
-### 8. PHP script handle (`sda-mp-slideshow.php`)
+## Architektúra pluginu
 
-Aktuálne: `$handle = 'mp-ImageSequence'`
-
-V3 pravdepodobne premenuje alebo zlúči skripty. Overiť po upgrade na v3 WordPress plugin:
-```php
-// Ak sa zmení handle, aktualizovať:
-$handle = 'mp-ImageSequence'; // ← možno bude 'mp-motion-sdk' alebo iný
+```
+sda-mp-slideshow/
+├── sda-mp-slideshow.php      # enqueue + routing stránka→timelineUID→dáta → inject
+├── data/
+│   └── slideshow-data.php    # zapečené dáta: animations (by timelineUID) + pages (routing)
+├── js/
+│   └── test-external.js      # dual-mode slideshow logika
+└── docs/
+    ├── db-export.md          # návod na DB export
+    └── data-mapping.md       # model dáta↔animácia↔stránka
 ```
 
----
+**Routing (server-side, PHP):** `kategória/stránka → slug → timelineUID → dáta animácie → window.SDA_SLIDESHOW_DATA`.
+Animácie sú priradené k **WooCommerce produktovým kategóriám** (`product_cat` = `WP_Term`), preto routing **podľa slug-u**
+(`$term->slug`), cez `get_queried_object()`. ✅ overené (term `otvorene-systemy`). Export `post_id` ≠ term_id (228 vs 4657),
+takže `by_post` je len fallback pre 2 staré riadky bez slug-u.
 
-## Poradie akcií pri upgrade
-
-1. **Pred upgradom:** Nič neinštalovať — poznač si tieto body
-2. **Po upgrade v3 WordPress pluginu:** Overiť verifikačné kroky (DevTools)
-3. **Podľa výsledkov:** Implementovať zmeny v kóde (viď sekciu nižšie)
-
----
-
-## Verifikačné kroky v DevTools (po upgrade na v3)
-
-```javascript
-// === Krok 1: Základné globály ===
-console.log('GSAP:', window.gsap);           // Malo by byť undefined
-console.log('Motion:', window.Motion);        // Malo by existovať
-console.log('MotionTimeline:', window.MotionTimeline); // Malo by existovať
-
-// === Krok 2: Timeline prístup ===
-console.log('has:', Motion.has('mpSequence'));       // true?
-var tl = Motion.get('mpSequence');
-console.log('timeline:', tl);
-
-// === Krok 3: Custom data (KRITICKÉ) ===
-console.log('tl.data:', tl.data);            // undefined alebo objekt s numSlides?
-console.log('MOTIONPAGE_FRONT:', window.MOTIONPAGE_FRONT); // nové polia?
-
-// === Krok 4: Parent (v3 by nemalo existovať) ===
-console.log('parent:', tl.parent);           // undefined očakávané
-
-// === Krok 5: Metódy ===
-console.log('reversed:', tl.reversed());     // boolean?
-console.log('time:', tl.time());             // číslo v sekundách?
-console.log('duration:', tl.duration());     // číslo?
-
-// === Krok 6: Script handles (v WP admin) ===
-// wp_scripts()->registered — zoznam všetkých registrovaných handles
-```
+Zapečené z exportu: **30 animácií + 2 legacy** ([wp_Ekupa97M_motionpage_code.sql](wp_Ekupa97M_motionpage_code.sql)).
 
 ---
 
-## Súbory na úpravu
+## Overené SDK API (referencia, proti `Timeline.d.ts` / `Motion.d.ts`)
 
-- [sda-mp-slideshow/js/test-external.js](sda-mp-slideshow/js/test-external.js) — všetky JS zmeny
-- [sda-mp-slideshow/sda-mp-slideshow.php](sda-mp-slideshow/sda-mp-slideshow.php) — PHP handle
+Funguje v oboch enginoch, ak nie je uvedené inak:
+
+| Metóda | GSAP | SDK | pozn. |
+|--------|------|-----|------|
+| `play()` / `play(from)` | ✓ | ✅ `play(from?: number)` | |
+| `pause()` / `reverse()` / `restart()` | ✓ | ✅ | |
+| `reversed()` getter | ✓ | ✅ `reversed(): boolean` | |
+| `reversed(bool)` **setter** | ✓ | ❌ | → `play(from)` |
+| `time()` get/set | ✓ | ✅ `time()` / `time(v)` | |
+| `seek(value)` | — | ✅ | |
+| `progress()` / `timeScale()` / `duration()` / `totalDuration()` / `isActive()` | ✓ | ✅ | |
+| `call(fn, args, pos)` | ✓ | ✅ `pos: string \| number` | číselná pozícia → bez `addLabel` |
+| `addLabel()` | ✓ | ❌ | nahradené číselnou pozíciou |
+| `totalTime()` / `yoyo()` / `repeat()` / `repeatDelay()` | ✓ | ❌ | v `playingBackwards` cez `typeof` guard |
+| `.parent` | ✓ | ❌ | `mpSeq.parent \|\| mpSeq` |
+| `.data` | ✓ (GSAP ext.) | ❌ | → odpojené (baked / Elementor) |
+
+**Motion API:** `Motion(name)` (factory), `Motion.get(name)` → `Timeline|undefined`, `Motion.has(name)`,
+`Motion.getNames()`, `Motion.kill/killAll/cleanup`.
 
 ---
 
-## Kompletný prepis `test-external.js` pre v3 (template)
+## ✅ Vykonané
 
-Po overení verifikačných krokov bude kód vyzerať takto (predpoklad: `.data` stále funguje):
+- SDK `@motion.page/sdk` 1.1.4 → **1.2.1** ([package.json](package.json)). (Doinštalovaný Node.js 24.16.0.)
+- [test-external.js](sda-mp-slideshow/js/test-external.js): dual-mode, `seqData()` hybrid, `playingBackwards` guard. `node --check` ✅
+- [sda-mp-slideshow.php](sda-mp-slideshow/sda-mp-slideshow.php) (v1.2): routing + injekcia dát; handle ostal `mp-ImageSequence`.
+- [data/slideshow-data.php](sda-mp-slideshow/data/slideshow-data.php): 30 animácií + 2 legacy, animation-centric.
+- Docs: [db-export.md](sda-mp-slideshow/docs/db-export.md), [data-mapping.md](sda-mp-slideshow/docs/data-mapping.md).
 
-```javascript
-console.log("Slideshow script loaded (v3).");
+---
 
-var seqEnabled = false;
-setTimeout(function() { seqEnabled = true; }, 2000);
+## ✅ Overené naživo (GSAP web, plugin nasadený)
 
-function deferSlideshow(useMethod) {
-    // v3: Motion namiesto gsap
-    if (window.jQuery && window.Motion && Motion.has('mpSequence') && seqEnabled) {
-        useMethod();
-    } else {
-        setTimeout(function() { deferSlideshow(useMethod) }, 500);
-    }
-}
+- **Routing** podľa `product_cat` slug-u (`get_queried_object()->slug`) — sedí.
+- **Všetky 3 zdroje dát** cez `seqData()`: **Elementor** data-atribúty (per-kategória, pre nové sekvencie),
+  **baked** `window.SDA_SLIDESHOW_DATA` (existujúce), **legacy** `mpSeq.data` (poistka). Diagnostika to potvrdila.
 
-deferSlideshow(function() {
-    console.log("DOM is ready");
+## ⏳ Zostáva
 
-    // v3: Motion.get() namiesto gsap.getById()
-    mpSeq = Motion.get('mpSequence');
-
-    // POZOR: .data musí byť overené — možno iný zdroj dát v v3
-    numSlides = mpSeq.data['numSlides'];
-    timeSlide = [];
-    errData = false;
-    if (numSlides && numSlides > 0) {
-        for (let i = 1; i <= numSlides; i++) {
-            timeValue = mpSeq.data['timeSlide' + i];
-            if (Number(parseFloat(timeValue)) === timeValue) {
-                timeSlide[i] = timeValue;
-            } else {
-                errData = true;
-            }
-        }
-    } else {
-        errData = true;
-    }
-    if (errData) { console.log('Check MP sequence custom data!'); }
-
-    // ... jQuery DOM kod zostáva rovnaký ...
-
-    // v3: mpSeq IS the main timeline (no .parent)
-    mpTL = mpSeq;
-
-    // v3: call priamo s časom, bez addLabel
-    for (let i = 1; i <= numSlides; i++) {
-        mpTL.call(showSlide, [i], timeSlide[i]); // žiadny addLabel!
-    }
-
-    function showSlide(actSlide) {
-        console.log(playingBackwards(mpTL));
-        if (tweenSlideNum !== 0 && tweenSlideNum == actSlide) {
-            tweenSlideNum = 0;
-            tweenActive = false;
-            if (playingBackwards(mpTL)) {
-                // v3: play() namiesto reversed(false), seek() namiesto time()
-                mpTL.play();
-                mpTL.seek(timeSlide[actSlide] + 0.01);
-            }
-        }
-        // ... zvyšok showSlide zostáva rovnaký ...
-    }
-
-    // v3: zjednodušená playingBackwards (bez GSAP-špecifickej logiky)
-    function playingBackwards(animation) {
-        return animation.reversed();
-    }
-
-    // ... zvyšok kódu zostáva rovnaký ...
-    mpTL.play();
-});
-```
+1. **Legacy stránky `post_id` 2897, 6432** — zistiť čo sú zač a či ešte majú slideshow; inak vyhoď z dátového súboru.
+2. **Migrácia na v3** (keď budeš chcieť): backup DB + ZIP 2.5.3 → otvor builder (spustí auto-migráciu) → re-test
+   debugom (engine má byť `SDK`, `mp-motion-sdk` ✓, zdroj `baked`/`Elementor`). Legacy `mpSeq.data` po migrácii zmizne,
+   ale baked/Elementor to pokryjú.
+3. **Cleanup** po overení: deaktivuj `sda-mp-debug` plugin a v `test-external.js` daj `SDA_SLIDESHOW_DEBUG = false`.

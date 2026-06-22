@@ -1,0 +1,6 @@
+# Build artifacts / deployment packages (regenerable from source)
+*.zip
+
+# OS junk
+.DS_Store
+Thumbs.db
