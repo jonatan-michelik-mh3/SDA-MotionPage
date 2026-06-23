@@ -186,13 +186,7 @@ class Enqueue extends Base {
 				'wpmlSync' => ($main_settings['system']['wpml'] ?? 0) === 1,
 				];
 
-			$this->dssa =
-				!$this->iframeCtx &&
-				\current_user_can('manage_options') &&
-				($main_settings['advanced']['dssa'] ?? 0) === 1;
-
 			if (
-				!$this->dssa &&
 				($main_settings['scrollSmoother']['isOpen'] ?? 0) === 1 &&
 				!empty($main_settings['scrollSmoother']['code'] ?? '')
 			) {
@@ -203,7 +197,10 @@ class Enqueue extends Base {
 
 			// Configure Lenis smooth scrolling
 			// Page-specific exclusions are handled later during enqueue to ensure WordPress query is loaded
-			if (($main_settings['lenis']['isOpen'] ?? 0) === 1 && !empty($main_settings['lenis']['code'] ?? '')) {
+			if (
+				($main_settings['lenis']['isOpen'] ?? 0) === 1 &&
+				!empty($main_settings['lenis']['code'] ?? '')
+			) {
 				$this->is_lenis = true;
 				$this->lenis = htmlspecialchars_decode($main_settings['lenis']['code'], ENT_QUOTES);
 			}
@@ -828,6 +825,13 @@ class Enqueue extends Base {
 							$pageExit = true;
 						}
 
+						$has_generated_code =
+							property_exists($script_holder, 'generated_code') &&
+							!empty($script_holder->generated_code);
+						$is_noop_generated_code =
+							$has_generated_code &&
+							strpos((string) $script_holder->generated_code, 'Motion.page: no generated animation after migration') !== false;
+
 						// Handle BypassReducedMotion animations (must check plugins is not null)
 						if (
 							property_exists($script_holder, 'plugins') &&
@@ -835,7 +839,9 @@ class Enqueue extends Base {
 							strpos($script_holder->plugins, 'BypassReducedMotion') !== false
 						) {
 							// Use generated_code if SDK bundle is available, otherwise use legacy script_value
-							if ($sdk_bundle_url && !empty($script_holder->generated_code)) {
+							if ($sdk_bundle_url && $has_generated_code) {
+								$bypass_reduced_motion .= $script_holder->generated_code . ';';
+							} elseif (!$sdk_bundle_url && $is_noop_generated_code) {
 								$bypass_reduced_motion .= $script_holder->generated_code . ';';
 							} elseif (!$sdk_bundle_url) {
 								$bypass_reduced_motion .= $script_holder->script_value;
@@ -846,8 +852,12 @@ class Enqueue extends Base {
 							continue;
 						}
 
-						if (!empty($script_holder->generated_code)) {
+						if ($sdk_bundle_url && $has_generated_code) {
 							$script .= $script_holder->generated_code . ';';
+						} elseif (!$sdk_bundle_url && $is_noop_generated_code) {
+							$script .= $script_holder->generated_code . ';';
+						} elseif (!$sdk_bundle_url) {
+							$script .= $script_holder->script_value;
 						} else {
 							$script .= "console.warn('[Motion.page] Animation " . esc_js($script_holder->id ?? 'unknown') . " requires migration — open the builder to run migration.');";
 						}
@@ -1038,11 +1048,6 @@ class Enqueue extends Base {
 						strpos($script_holder->plugins, 'ScrollToPlugin') !== false
 					) {
 						$this->mpEnqueueScript('ScrollToPlugin');
-					}
-
-					if ($this->dssa) {
-						$dcl_wrapper .=
-							'console.warn("%cScrollSmoother is disabled for admin users!", "font: 11px Inconsolata, monospace;color: #41FF00;");';
 					}
 
 					\wp_add_inline_script($this->lastScriptId, 'window._$W = window;' . $dcl_wrapper, 'after');

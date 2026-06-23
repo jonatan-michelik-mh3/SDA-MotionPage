@@ -72,13 +72,13 @@
     "src": "../../../../packages/builder/src/assets/header.webp"
   },
   "../../../../packages/builder/src/embed/embed.ts": {
-    "file": "assets/embed-Cbom_mIK.js",
+    "file": "assets/embed-Bz2V9KCy.js",
     "name": "embed",
     "src": "../../../../packages/builder/src/embed/embed.ts",
     "isEntry": true,
     "imports": [
       "../../../../packages/sdk/src/index.ts",
-      "_dispatchEvent-COqex2wi.js"
+      "_dispatchEvent-Dw4gIWTQ.js"
     ],
     "dynamicImports": [
       "../../../../packages/builder/src/exports/isDebug.ts"
@@ -91,13 +91,13 @@
     "isDynamicEntry": true
   },
   "../../../../packages/sdk/src/index.ts": {
-    "file": "assets/vendor-sdk-C1SbRpb_.js",
+    "file": "assets/vendor-sdk-ZzhFu160.js",
     "name": "vendor-sdk",
     "src": "../../../../packages/sdk/src/index.ts",
     "isDynamicEntry": true
   },
-  "_dispatchEvent-COqex2wi.js": {
-    "file": "assets/dispatchEvent-COqex2wi.js",
+  "_dispatchEvent-Dw4gIWTQ.js": {
+    "file": "assets/dispatchEvent-Dw4gIWTQ.js",
     "name": "dispatchEvent"
   },
   "_vendor-react-CuWo45CW.css": {
@@ -122,12 +122,12 @@
     ]
   },
   "main.tsx": {
-    "file": "assets/main-BaTxcjgf.js",
+    "file": "assets/main-Yr7HzT8R.js",
     "name": "main",
     "src": "main.tsx",
     "isEntry": true,
     "imports": [
-      "_dispatchEvent-COqex2wi.js",
+      "_dispatchEvent-Dw4gIWTQ.js",
       "_vendor-react-CwrzGbg2.js",
       "../../../../packages/sdk/src/index.ts"
     ],

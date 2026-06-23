@@ -195,9 +195,12 @@ class Helpers extends Base {
 				);
 			}
 
-			// Check if any active animations still need migration (have script_value
-			// but no generated_code). This is the ONE-TIME pre-3.0 → 3.0 migration.
-			// Only set pending if there are ACTUAL legacy animations needing conversion.
+			// Check if any active animations still need migration. Missing
+			// generated_code catches the pre-3.0 engine migration. A stored Builder
+			// version before 3.2.0 with any active animations catches reload-only
+			// migrations such as responsive matchMedia conversion and timeline row
+			// repair, which PHP cannot safely inspect because the canonical reload
+			// migration lives in TypeScript.
 			//
 			// IMPORTANT: Do NOT delete SDK files or force migration on routine updates.
 			// The SDK bundle in wp-content/uploads/motionpage-sdk/ survives plugin updates
@@ -205,15 +208,28 @@ class Helpers extends Base {
 			// manually re-runs migration. The SDK bundle is regenerated automatically
 			// when animations are saved in the builder.
 			$data_table = $wpdb->prefix . 'motionpage_data';
+			$active_animation_count = (int) $wpdb->get_var(
+				"SELECT COUNT(*) FROM `{$data_table}` "
+				. "LEFT JOIN `{$table_name}` ON `{$data_table}`.id = `{$table_name}`.data_id "
+				. "WHERE `{$table_name}`.is_active = 1 "
+				. "AND ("
+				. "(`{$table_name}`.script_value IS NOT NULL AND `{$table_name}`.script_value != '') "
+				. "OR `{$data_table}`.trigger_name IN ('Mouse Follower', 'Cursor Tooltip')"
+				. ")"
+			);
 			$unmigrated_count = (int) $wpdb->get_var(
 				"SELECT COUNT(*) FROM `{$data_table}` "
 				. "LEFT JOIN `{$table_name}` ON `{$data_table}`.id = `{$table_name}`.data_id "
 				. "WHERE `{$table_name}`.is_active = 1 "
-				. "AND `{$table_name}`.script_value IS NOT NULL "
-				. "AND `{$table_name}`.script_value != '' "
+				. "AND ("
+				. "(`{$table_name}`.script_value IS NOT NULL AND `{$table_name}`.script_value != '') "
+				. "OR `{$data_table}`.trigger_name IN ('Mouse Follower', 'Cursor Tooltip')"
+				. ") "
 				. "AND (`{$table_name}`.generated_code IS NULL OR `{$table_name}`.generated_code = '')"
 			);
-			if ($unmigrated_count > 0) {
+			$needs_builder_reload_migration =
+				\version_compare($last_version, '3.2.0', '<') && $active_animation_count > 0;
+			if ($unmigrated_count > 0 || $needs_builder_reload_migration) {
 				$settings['system']['migration_status'] = 'pending';
 			}
 
@@ -242,11 +258,11 @@ class Helpers extends Base {
 				\delete_transient('motionpage/updated');
 			}
 		}
-		// NOTE: migration_status is only set to 'pending' during upgradeProcess()
-		// when unmigrated animations are detected. It is used solely for the WP
-		// admin notice (MigrationNotice.php) to prompt users to open the builder.
-		// The builder's useAutoMigrate hook silently migrates on startup and
-		// persists 'complete' back to the DB when done.
+		// NOTE: migration_status is set to 'pending' during upgradeProcess()
+		// when active animations may need Builder-side TypeScript migration.
+		// MigrationNotice.php prompts users to open the builder; the Builder
+		// clears the status only after auto-migration and SDK bundle refresh
+		// both finish without failures.
 	}
 
 	/**

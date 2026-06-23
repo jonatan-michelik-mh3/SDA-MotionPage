@@ -10,14 +10,14 @@ use motionpage\Common\UpdaterFunctions;
  * @copyright 	2025 CoreWeb OÜ
  * @license   	EULA + GPLv2
  * @link      	https://motion.page
- * @version  		3.2.0
+ * @version  		3.2.1
  *
  * @wordpress-plugin
  *
  * Plugin Name:   Motion.page
  * Plugin URI:    https://motion.page
  * Description:   Move it like it's HOT!
- * Version:       3.2.0
+ * Version:       3.2.1
  * Author:        David Babinec
  * Author URI:    https://motion.page
  * Text Domain:   motionpage
@@ -42,7 +42,7 @@ if (!defined('ABSPATH')) {
 }
 
 define('MOTIONPAGE_NAME', 'motionpage');
-define('MOTIONPAGE_VERSION', '3.2.0');
+define('MOTIONPAGE_VERSION', '3.2.1');
 define('MOTIONPAGE_FILE', __FILE__);
 define('MOTIONPAGE_BASENAME', plugin_basename(MOTIONPAGE_FILE));
 define('MOTIONPAGE_DIR_PATH', plugin_dir_path(MOTIONPAGE_FILE));

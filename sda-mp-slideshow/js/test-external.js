@@ -9,24 +9,47 @@ setTimeout(function() {
 }, 2000);
 	
 // Dual-engine lookup: works with the Motion.page SDK (v3) AND GSAP (v2 / v3
-// legacy mode). Returns the named timeline, or null if no engine is ready yet.
-// SDK is checked first so that, in v3 SDK mode, a stray window.gsap from another
-// plugin can't win (the timeline is only registered with one engine anyway).
-function mpGetSequence(id) {
-    if (window.Motion && Motion.get) return Motion.get(id);    // v3 SDK
-    if (window.gsap && gsap.getById) return gsap.getById(id);  // v2 / legacy GSAP
+// legacy mode). Returns the first registered timeline, or null if not ready.
+// SDK: Motion.getNames()[0] (timeline name = builder display name, e.g. 'Open Copy')
+// GSAP: gsap.getById('mpSequence')
+function mpGetSequence() {
+    if (window.Motion && typeof Motion.getNames === 'function') {
+        var names = Motion.getNames();
+        return names.length > 0 ? Motion.get(names[0]) : null;
+    }
+    if (window.gsap && gsap.getById) return gsap.getById('mpSequence');
     return null;
 }
 
+// MP v3 bug workaround: generated_code wraps all timeline creation inside
+// window.addEventListener("createImgSeq", ...) but nothing in the SDK or
+// plugin dispatches this event. We dispatch it once the SDK and the
+// ImageSequence class are both present.
+var createImgSeqDispatched = false;
+
 //Make script execution wait until jQuery and the animation engine are loaded
 function deferSlideshow(useMethod) {
-		var state = document.readyState;
-    // Ready when jQuery is up and either engine exposes the 'mpSequence' timeline.
-    if (window.jQuery && mpGetSequence('mpSequence') && seqEnabled) {
-        useMethod();
-    } else {
-        setTimeout(function() { deferSlideshow(useMethod) }, 500);
+    // SDK mode (v3): wait for Motion, dispatch createImgSeq to unlock timeline
+    // creation, then wait until a timeline appears in Motion.getNames().
+    if (window.Motion && typeof Motion.getNames === 'function') {
+        if (mpGetSequence() && window.jQuery && seqEnabled) {
+            return useMethod();
+        }
+        if (!createImgSeqDispatched &&
+            window.MOTIONPAGE_FRONT &&
+            typeof window.MOTIONPAGE_FRONT.imageSequence === 'function') {
+            createImgSeqDispatched = true;
+            window.dispatchEvent(new CustomEvent('createImgSeq'));
+            console.log('[SDA Slideshow] createImgSeq dispatched');
+        }
+        setTimeout(function() { deferSlideshow(useMethod); }, 500);
+        return;
     }
+    // GSAP mode (v2 / v3 legacy)
+    if (window.jQuery && mpGetSequence() && seqEnabled) {
+        return useMethod();
+    }
+    setTimeout(function() { deferSlideshow(useMethod) }, 500);
 }
 
 // Diagnostics — set to false to silence the source/value log in the console.
@@ -128,8 +151,8 @@ deferSlideshow(function() {
             //console.log("Window is loaded");
 					
             // load parameters from MP image sequence
-            // dual-engine: Motion.get() (SDK) or gsap.getById() (GSAP)
-            mpSeq = mpGetSequence('mpSequence');
+            // dual-engine: Motion.getNames()[0] (SDK) or gsap.getById() (GSAP)
+            mpSeq = mpGetSequence();
             // v3: custom data resolved via seqData() (no guaranteed .data on SDK Timeline)
             var seqDataObj = seqData(mpSeq);
             numSlides = seqDataObj ? seqDataObj['numSlides'] : undefined;

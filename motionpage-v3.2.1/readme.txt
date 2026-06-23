@@ -6,7 +6,7 @@ Tags: motion, animation, interaction, gsap
 Requires at least: 5.9.0
 Tested up to: 6.8.3
 Requires PHP: 8.0
-Stable tag: 3.2.0
+Stable tag: 3.2.1
 License: EULA + GPLv2
 License URI: https://motion.page/eula
 
@@ -44,6 +44,14 @@ Motion.page was built with performance in mind from day one. Assets are conditio
 Cumulative Layout Shift (CLS) will not be affected on any animated elements above the fold. If animations use transform properties, they are perfectly ok for Core Web Vitals.
 
 == Changelog ==
+
+= 3.2.1 =
+* [fix] Migration preserves legacy pin spacing more accurately, including pre-3.x quoted pinSpacing values that behaved differently in GSAP
+* [fix] Frontend animations with mixed CSS units now keep the correct start unit, for example font-size from 36px to 8vw no longer starts as 36vw
+* [fix] Timeline segments starting later no longer overwrite earlier initial values for the same target/property
+* [fix] Card animations using a section-level scroll trigger with "trigger each individually" now stagger again instead of all animating at once
+* [fix] Motion Path animations follow the visible path correctly on a scaled SVG, and snap onto the path by default — elements no longer drift off the line
+* [fix] Mouse Movement (mouse follower) animations whose section starts lower down the page now track the cursor after you scroll to them
 
 = 3.2.0 =
 * [new] Responsive Editing — animate any element differently per breakpoint (laptop / tablet / phone) on a single timeline. Switch device in the top bar, tweak values, and only your changes are stored as overrides that cascade down from desktop — no more duplicating a timeline per device

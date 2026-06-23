@@ -343,6 +343,10 @@ class Enqueue extends Base {
 			'headerNonce' => \wp_create_nonce('YRSH8YUD396XJH66ZE'),
 			'homepage_id' => (int) motionpage()->getOption('page_on_front', 0),
 			'version' => MOTIONPAGE_VERSION,
+			// Builder boot needs these to decide whether post-upgrade background
+			// migration/bundle work can safely clear the admin notice.
+			'migrationStatus' => (string) ($main_settings['system']['migration_status'] ?? 'complete'),
+			'sdkBundleVersion' => (string) motionpage()->getOption('motionpage_sdk_bundle_version', ''),
 			'dbv' => \esc_attr($current_dbv),
 			'theme' => ($main_settings['system']['theme'] ?? 'dark') === 'dark' ? 'dark' : 'light',
 			'b' => [

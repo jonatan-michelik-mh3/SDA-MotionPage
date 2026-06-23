@@ -153,7 +153,6 @@ class Functions extends Base {
 				'disabledTypes' => [],
 				'layout' => 0,
 				'hashAnchorLinks' => 0,
-				'dssa' => 0,
 				'stripGSAP' => 0,
 				'debugMode' => 0
 			],
@@ -195,7 +194,9 @@ class Functions extends Base {
 				'smoothTouch' => 0,
 				'mouseMultiplier' => 1,
 				'touchMultiplier' => 1.5,
-				'excludedPages' => ''
+				'excludedPages' => '',
+				'legacyWrapper' => '',
+				'legacyContent' => ''
 			]
 		];
 

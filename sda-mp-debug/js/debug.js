@@ -17,10 +17,21 @@
 
     function getSequence() {
         try {
-            if (window.Motion && Motion.get) return Motion.get('mpSequence') || null;
+            if (window.Motion && typeof Motion.getNames === 'function') {
+                var names = Motion.getNames();
+                return names.length > 0 ? Motion.get(names[0]) || null : null;
+            }
             if (window.gsap && gsap.getById) return gsap.getById('mpSequence') || null;
         } catch (e) {}
         return null;
+    }
+
+    function getSequenceName() {
+        if (window.Motion && typeof Motion.getNames === 'function') {
+            var names = Motion.getNames();
+            return names.length > 0 ? names[0] : null;
+        }
+        return 'mpSequence';
     }
 
     // Pull a readable times[] out of a { numSlides, timeSlideN } object.
@@ -82,7 +93,8 @@
             console.log('    ' + mark(!!sdaScript), 'test-external.js načítané', sdaScript ? '(' + sdaScript.src + ')' : '');
 
             console.log('%c4) Timeline', 'font-weight:bold');
-            console.log('  ' + mark(!!seq), "mpSequence timeline (engine: " + engine + ")");
+            var seqName = getSequenceName();
+            console.log('  ' + mark(!!seq), "timeline '" + (seqName || '—') + "' (engine: " + engine + ")");
             if (seq) {
                 try { console.log('    reversed():', seq.reversed && seq.reversed(), '| time():', seq.time && seq.time(), '| duration():', seq.duration && seq.duration()); } catch (e) {}
                 console.log('    .data (legacy):', seq.data || '(žiadne)');
@@ -110,7 +122,8 @@
     // Immediate snapshot (collapsed — early state).
     report('hneď pri načítaní', true);
 
-    // Deferred snapshot — wait for engine + timeline (mirrors SDA deferSlideshow), max ~10 s.
+    // Deferred snapshot — mirrors SDA deferSlideshow logic (SDK: any timeline in
+    // Motion.getNames(); GSAP: gsap.getById('mpSequence')), max ~10 s.
     var tries = 0, MAX = 20;
     (function waitReady() {
         if (window.jQuery && detectEngine() !== 'none' && getSequence()) {
@@ -118,7 +131,7 @@
         } else if (tries++ < MAX) {
             setTimeout(waitReady, 500);
         } else {
-            console.warn(TAG + ' mpSequence sa nepripravil do ' + (MAX * 0.5) + ' s — posledný stav:');
+            console.warn(TAG + ' timeline sa nepripravil do ' + (MAX * 0.5) + ' s — posledný stav:');
             report('timeout', false);
         }
     })();
